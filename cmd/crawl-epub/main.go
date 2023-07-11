@@ -41,7 +41,8 @@ func main() {
 
 	for i := 0; i < length; i++ {
 		go func(i int) {
-			chapter, err := getChapter(fmt.Sprintf("http://localhost:5001/truyen/%s/chuong-%d.html", title, i+from))
+			number := i + from
+			chapter, err := getChapter(fmt.Sprintf("http://localhost:5001/truyen/%s/chuong-%d.html", title, number), number)
 			if err != nil {
 				log.Fatal(err)
 			}
