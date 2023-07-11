@@ -1,0 +1,14 @@
+@font-face {
+  font-family: OpenSans;
+  src: url(../fonts/OpenSans-Regular.ttf) format('truetype');
+}
+
+* {
+  font-family: OpenSans, sans-serif;
+  font-size: 1.1rem;
+}
+
+.title {
+  font-weight: bold;
+  font-size: 1.4rem;
+}
