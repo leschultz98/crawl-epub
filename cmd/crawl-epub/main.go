@@ -17,12 +17,11 @@ const (
 
 func main() {
 	var (
-		title, urlF string
-		from        int
+		title string
+		from  int
 	)
 
 	flag.StringVar(&title, "title", "ai-con-khong-la-cai-nguoi-tu-hanh-roi", "ebook title")
-	flag.StringVar(&urlF, "url", "http://localhost:5001/truyen/ai-con-khong-la-cai-nguoi-tu-hanh-roi/chuong-%d.html", "ebook url pattern")
 	flag.IntVar(&from, "from", 1, "ebook from chapter")
 	flag.Parse()
 
@@ -39,7 +38,7 @@ func main() {
 	}
 
 	for {
-		chapter, err := getChapter(fmt.Sprintf(urlF, from))
+		chapter, err := getChapter(fmt.Sprintf("http://localhost:5001/truyen/%s/chuong-%d.html", title, from))
 		if err != nil {
 			log.Fatal(err)
 		}
