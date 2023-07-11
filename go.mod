@@ -1,4 +1,4 @@
-module awesome
+module crawl-epub
 
 go 1.20
 
