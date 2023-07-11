@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
@@ -17,8 +16,6 @@ type chapter struct {
 }
 
 func getChapter(url string) (*chapter, error) {
-	log.Printf("get chapter from %s", url)
-
 	res, err := http.Get(url)
 	if err != nil {
 		return nil, err
