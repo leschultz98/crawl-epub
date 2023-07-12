@@ -1,9 +1,11 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"sync"
 
@@ -16,6 +18,10 @@ const (
 	outputDir = "ebooks"
 )
 
+type application struct {
+	client *http.Client
+}
+
 func main() {
 	var (
 		title string
@@ -25,11 +31,20 @@ func main() {
 
 	flag.StringVar(&title, "title", "ai-con-khong-la-cai-nguoi-tu-hanh-roi", "ebook title")
 	flag.IntVar(&from, "from", 1, "ebook from chapter")
-	flag.IntVar(&end, "end", 0, "ebook to chapter")
+	flag.IntVar(&end, "end", 0, "ebook to chapter (require)")
 	flag.Parse()
 
 	if end == 0 {
 		log.Fatal("must set flag end greater than 0")
+	}
+
+	app := application{
+		client: &http.Client{
+			// disable HTTP/2
+			Transport: &http.Transport{
+				TLSNextProto: map[string]func(string, *tls.Conn) http.RoundTripper{},
+			},
+		},
 	}
 
 	length := end - from + 1
@@ -42,7 +57,7 @@ func main() {
 	for i := 0; i < length; i++ {
 		go func(i int) {
 			number := i + from
-			chapter, err := getChapter(fmt.Sprintf("http://localhost:5001/truyen/%s/chuong-%d.html", title, number), number)
+			chapter, err := app.getChapter(fmt.Sprintf("https://truyenyy.vip/truyen/%s/chuong-%d.html", title, number), number)
 			if err != nil {
 				log.Fatal(err)
 			}

@@ -16,8 +16,14 @@ type chapter struct {
 	content string
 }
 
-func getChapter(url string, number int) (*chapter, error) {
-	res, err := http.Get(url)
+func (app *application) getChapter(url string, number int) (*chapter, error) {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header["User-Agent"] = []string{"undici"}
+
+	res, err := app.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
