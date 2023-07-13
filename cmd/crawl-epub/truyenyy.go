@@ -12,26 +12,24 @@ import (
 )
 
 const (
-	titleSelector   = "h2.heading-font"
-	contentSelector = "#inner_chap_content_1"
-	urlFormat       = "https://truyenyy.vip/truyen/%s/chuong-%d.html"
+	truyenyyTitleSelector   = "h2.heading-font"
+	truyenyyContentSelector = "#inner_chap_content_1"
+	truyenyyUrlFormat       = "https://truyenyy.vip/truyen/%s/chuong-%d.html"
 )
 
 type truyenyy struct{}
 
-func (t truyenyy) getChapters(cfg config) ([]*chapter, error) {
-	length := cfg.end - cfg.from + 1
-
-	if length < 1 {
-		log.Fatal("must set flag end greater than 0")
+func (t truyenyy) getChapters(cfg *config) ([]*chapter, error) {
+	if cfg.length < 1 {
+		log.Fatal("must set appropriate end")
 	}
 
-	bar := newBar(length, "Get chapter...")
+	bar := newBar(cfg.length, "  Get chapter...")
 
 	var wg sync.WaitGroup
-	wg.Add(length)
+	wg.Add(cfg.length)
 
-	chapters := make([]*chapter, length)
+	chapters := make([]*chapter, cfg.length)
 	client := &http.Client{
 		// disable HTTP/2
 		Transport: &http.Transport{
@@ -39,10 +37,10 @@ func (t truyenyy) getChapters(cfg config) ([]*chapter, error) {
 		},
 	}
 
-	for i := 0; i < length; i++ {
+	for i := 0; i < cfg.length; i++ {
 		go func(i int) {
 			number := i + cfg.from
-			chapter, err := t.getChapter(client, fmt.Sprintf(urlFormat, cfg.title, number), number)
+			chapter, err := t.getChapter(client, fmt.Sprintf(truyenyyUrlFormat, cfg.title, number), number)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -85,11 +83,11 @@ func (t truyenyy) getChapter(client *http.Client, url string, number int) (*chap
 	var title string
 	var content string
 
-	doc.Find(titleSelector).Each(func(i int, s *goquery.Selection) {
+	doc.Find(truyenyyTitleSelector).Each(func(i int, s *goquery.Selection) {
 		title = s.Text()
 	})
 
-	doc.Find(contentSelector).Each(func(i int, s *goquery.Selection) {
+	doc.Find(truyenyyContentSelector).Each(func(i int, s *goquery.Selection) {
 		content, err = s.Html()
 	})
 	if err != nil {
