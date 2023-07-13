@@ -87,9 +87,6 @@ func (t ttv) getChapterList(client *http.Client, cfg *config) ([]*chapter, error
 
 	list.EachWithBreak(func(i int, s *goquery.Selection) bool {
 		title := s.Text()
-		url := s.AttrOr("href", "")
-
-		chapters = append(chapters, &chapter{title: title, url: url})
 
 		var number int
 		number, err = strconv.Atoi(r.FindStringSubmatch(title)[2])
@@ -97,7 +94,16 @@ func (t ttv) getChapterList(client *http.Client, cfg *config) ([]*chapter, error
 			return false
 		}
 
-		return number <= cfg.end
+		if number > cfg.end {
+			return false
+		}
+
+		if number >= cfg.from {
+			url := s.AttrOr("href", "")
+			chapters = append(chapters, &chapter{title: title, url: url})
+		}
+
+		return true
 	})
 	if err != nil {
 		return nil, err
