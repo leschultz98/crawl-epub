@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -13,7 +11,7 @@ import (
 	"github.com/schollz/progressbar/v3"
 )
 
-const ttvListSelector = "li a"
+const ttvListSelector = "li a[title]"
 const ttvContentSelector = "p.content-block"
 
 type ttv struct {
@@ -57,14 +55,10 @@ func (t *ttv) getChapter(req *http.Request, i int) {
 
 	defer res.Body.Close()
 
-	if res.StatusCode == http.StatusServiceUnavailable {
+	if res.StatusCode != http.StatusOK {
 		res.Body.Close()
 		go t.getChapter(req, i)
 		return
-	}
-
-	if res.StatusCode != http.StatusOK {
-		log.Fatal(fmt.Errorf("status code error: %d %s", res.StatusCode, res.Status))
 	}
 
 	doc, err := goquery.NewDocumentFromReader(res.Body)
@@ -110,42 +104,24 @@ func (t *ttv) getChapterList(cfg *config) ([]*chapter, error) {
 	}
 
 	list := doc.Find(ttvListSelector)
+	listLength := list.Size()
 
-	if cfg.length < 1 {
-		cfg.length = list.Size()
+	if cfg.length == 0 {
+		cfg.length = listLength
 	}
 
 	chapters := make([]*chapter, 0, cfg.length)
 
-	r, err := regexp.Compile(`(Chương\s+)(\d+)`)
-	if err != nil {
-		return nil, err
-	}
+	list.Each(func(i int, s *goquery.Selection) {
+		if i < listLength-cfg.length {
+			return
+		}
 
-	list.EachWithBreak(func(i int, s *goquery.Selection) bool {
 		title := s.AttrOr("title", "")
-
-		var number int
-		number, err = strconv.Atoi(r.FindStringSubmatch(title)[2])
-		if err != nil {
-			return false
-		}
-
-		if number > cfg.end {
-			return false
-		}
-
-		if number >= cfg.from {
-			url := s.AttrOr("href", "")
-			url = strings.Replace(url, "https://truyen.tangthuvien.vn/", "https://m.truyen.tangthuvien.vn/", 1)
-			chapters = append(chapters, &chapter{title: title, url: url})
-		}
-
-		return true
+		url := s.AttrOr("href", "")
+		url = strings.Replace(url, "https://truyen.tangthuvien.vn/", "https://m.truyen.tangthuvien.vn/", 1)
+		chapters = append(chapters, &chapter{title: title, url: url})
 	})
-	if err != nil {
-		return nil, err
-	}
 
 	return chapters, nil
 }

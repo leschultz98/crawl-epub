@@ -43,8 +43,7 @@ func (t *truyenyy) getChapters(cfg *config) ([]*chapter, error) {
 
 	for i := 0; i < cfg.length; i++ {
 		go func(i int) {
-			number := i + cfg.from
-			chapter, err := t.getChapter(fmt.Sprintf(truyenyyUrlFormat, cfg.title, number), number)
+			chapter, err := t.getChapter(fmt.Sprintf(truyenyyUrlFormat, cfg.title, i+1), i+1)
 			if err != nil {
 				log.Fatal(err)
 			}
