@@ -2,61 +2,97 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"regexp"
 	"strconv"
+	"sync"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/schollz/progressbar/v3"
 )
 
 const ttvListSelector = ".chapters:nth-child(2) li a"
 const ttvContentSelector = "p.content-block"
 
-type ttv struct{}
+type ttv struct {
+	client   *http.Client
+	chapters []*chapter
+	bar      *progressbar.ProgressBar
+	wg       sync.WaitGroup
+	l        sync.Mutex
+}
 
-func (t ttv) getChapters(cfg *config) ([]*chapter, error) {
-	client := &http.Client{}
+func (t *ttv) getChapters(cfg *config) ([]*chapter, error) {
+	t.client = &http.Client{}
 
-	chapters, err := t.getChapterList(client, cfg)
+	chapters, err := t.getChapterList(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	bar := newBar(len(chapters), "  Get chapter...")
+	t.chapters = chapters
+	t.bar = newBar(cfg.length, "  Get chapter...")
+	t.wg.Add(cfg.length)
 
-	for i := range chapters {
-		chapters[i].content = fmt.Sprintf("<h1>%s</h1>", chapters[i].title)
-		res, err := t.makeRequest(client, chapters[i].url)
+	for i := range t.chapters {
+		req, err := t.newRequest(chapters[i].url)
 		if err != nil {
 			return nil, err
 		}
 
-		defer res.Body.Close()
-
-		if res.StatusCode != 200 {
-			return nil, fmt.Errorf("status code error: %d %s", res.StatusCode, res.Status)
-		}
-
-		doc, err := goquery.NewDocumentFromReader(res.Body)
-		if err != nil {
-			return nil, err
-		}
-
-		doc.Find(ttvContentSelector).Each(func(j int, s *goquery.Selection) {
-			chapters[i].content += fmt.Sprintf("<p>%s</p>", s.Text())
-		})
-
-		bar.Add(1)
+		go t.getChapter(req, i)
 	}
 
+	t.wg.Wait()
 	return chapters, nil
 }
 
-func (t ttv) getChapterList(client *http.Client, cfg *config) ([]*chapter, error) {
+func (t *ttv) getChapter(req *http.Request, i int) {
+	res, err := t.client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer res.Body.Close()
+
+	if res.StatusCode == http.StatusServiceUnavailable {
+		res.Body.Close()
+		go t.getChapter(req, i)
+		return
+	}
+
+	if res.StatusCode != http.StatusOK {
+		log.Fatal(fmt.Errorf("status code error: %d %s", res.StatusCode, res.Status))
+	}
+
+	doc, err := goquery.NewDocumentFromReader(res.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	t.l.Lock()
+	t.chapters[i].content = fmt.Sprintf("<h1>%s</h1>", t.chapters[i].title)
+
+	doc.Find(ttvContentSelector).Each(func(j int, s *goquery.Selection) {
+		t.chapters[i].content += fmt.Sprintf("<p>%s</p>", s.Text())
+	})
+	t.l.Unlock()
+
+	t.bar.Add(1)
+	t.wg.Done()
+}
+
+func (t *ttv) getChapterList(cfg *config) ([]*chapter, error) {
 	bar := newSpinner("Get chapter list...")
 	defer bar.Finish()
 
-	res, err := t.makeRequest(client, cfg.chapterListUrl)
+	req, err := t.newRequest(cfg.chapterListUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := t.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +148,7 @@ func (t ttv) getChapterList(client *http.Client, cfg *config) ([]*chapter, error
 	return chapters, nil
 }
 
-func (t ttv) makeRequest(client *http.Client, url string) (*http.Response, error) {
+func (t *ttv) newRequest(url string) (*http.Request, error) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -120,5 +156,5 @@ func (t ttv) makeRequest(client *http.Client, url string) (*http.Response, error
 
 	req.Header.Set("User-Agent", "Mobile")
 
-	return client.Do(req)
+	return req, nil
 }
