@@ -11,12 +11,12 @@ const (
 )
 
 type config struct {
-	source         string
-	from           int
-	end            int
-	length         int
-	title          string
-	chapterListUrl string
+	source string
+	from   int
+	end    int
+	length int
+	title  string
+	bookID string
 }
 
 type chapter struct {
@@ -36,7 +36,7 @@ func main() {
 	flag.StringVar(&cfg.title, "title", "trafford-nguoi-mua-cau-lac-bo", "ebook title")
 	flag.IntVar(&cfg.from, "from", 1, "chapter start")
 	flag.IntVar(&cfg.end, "end", 0, "chapter end (require for truyenyy")
-	flag.StringVar(&cfg.chapterListUrl, "list", "https://m.truyen.tangthuvien.vn/danh-sach-chuong/13450", "chapter list url")
+	flag.StringVar(&cfg.bookID, "bookID", "13450", "ttv book id")
 	flag.Parse()
 
 	cfg.length = cfg.end - cfg.from + 1

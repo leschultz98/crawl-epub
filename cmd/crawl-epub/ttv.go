@@ -6,13 +6,14 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/schollz/progressbar/v3"
 )
 
-const ttvListSelector = ".chapters:nth-child(2) li a"
+const ttvListSelector = "li a"
 const ttvContentSelector = "p.content-block"
 
 type ttv struct {
@@ -87,7 +88,7 @@ func (t *ttv) getChapterList(cfg *config) ([]*chapter, error) {
 	bar := newSpinner("Get chapter list...")
 	defer bar.Finish()
 
-	req, err := t.newRequest(cfg.chapterListUrl)
+	req, err := t.newRequest(fmt.Sprintf("https://truyen.tangthuvien.vn/doc-truyen/page/%s?limit=10000", cfg.bookID))
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +123,7 @@ func (t *ttv) getChapterList(cfg *config) ([]*chapter, error) {
 	}
 
 	list.EachWithBreak(func(i int, s *goquery.Selection) bool {
-		title := s.Text()
+		title := s.AttrOr("title", "")
 
 		var number int
 		number, err = strconv.Atoi(r.FindStringSubmatch(title)[2])
@@ -136,6 +137,7 @@ func (t *ttv) getChapterList(cfg *config) ([]*chapter, error) {
 
 		if number >= cfg.from {
 			url := s.AttrOr("href", "")
+			url = strings.Replace(url, "https://truyen.tangthuvien.vn/", "https://m.truyen.tangthuvien.vn/", 1)
 			chapters = append(chapters, &chapter{title: title, url: url})
 		}
 
