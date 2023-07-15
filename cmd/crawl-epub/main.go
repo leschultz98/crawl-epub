@@ -45,9 +45,9 @@ func main() {
 
 	switch cfg.source {
 	case truyenyySource:
-		c = truyenyy{}
+		c = &truyenyy{}
 	case ttvSource:
-		c = ttv{}
+		c = &ttv{}
 	default:
 		log.Fatal("inappropriate source")
 	}

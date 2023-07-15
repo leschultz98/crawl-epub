@@ -17,61 +17,66 @@ const (
 	truyenyyUrlFormat       = "https://truyenyy.vip/truyen/%s/chuong-%d.html"
 )
 
-type truyenyy struct{}
+type truyenyy struct {
+	client *http.Client
+	wg     sync.WaitGroup
+	l      sync.Mutex
+}
 
-func (t truyenyy) getChapters(cfg *config) ([]*chapter, error) {
+func (t *truyenyy) getChapters(cfg *config) ([]*chapter, error) {
 	if cfg.length < 1 {
 		log.Fatal("must set appropriate end")
 	}
 
 	bar := newBar(cfg.length, "  Get chapter...")
 
-	var wg sync.WaitGroup
-	wg.Add(cfg.length)
-
-	chapters := make([]*chapter, cfg.length)
-	client := &http.Client{
+	t.client = &http.Client{
 		// disable HTTP/2
 		Transport: &http.Transport{
 			TLSNextProto: map[string]func(string, *tls.Conn) http.RoundTripper{},
 		},
 	}
 
+	t.wg.Add(cfg.length)
+
+	chapters := make([]*chapter, cfg.length)
+
 	for i := 0; i < cfg.length; i++ {
 		go func(i int) {
 			number := i + cfg.from
-			chapter, err := t.getChapter(client, fmt.Sprintf(truyenyyUrlFormat, cfg.title, number), number)
+			chapter, err := t.getChapter(fmt.Sprintf(truyenyyUrlFormat, cfg.title, number), number)
 			if err != nil {
 				log.Fatal(err)
 			}
 
+			t.l.Lock()
 			chapters[i] = chapter
+			t.l.Unlock()
+
 			bar.Add(1)
-			wg.Done()
+			t.wg.Done()
 		}(i)
 	}
 
-	wg.Wait()
-
+	t.wg.Wait()
 	return chapters, nil
-
 }
 
-func (t truyenyy) getChapter(client *http.Client, url string, number int) (*chapter, error) {
+func (t *truyenyy) getChapter(url string, number int) (*chapter, error) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header["User-Agent"] = []string{"undici"}
 
-	res, err := client.Do(req)
+	res, err := t.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 
 	defer res.Body.Close()
 
-	if res.StatusCode != 200 {
+	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("status code error: %d %s", res.StatusCode, res.Status)
 	}
 
