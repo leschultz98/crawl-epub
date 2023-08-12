@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"sync"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/schollz/progressbar/v3"
@@ -15,11 +14,10 @@ const ttvListSelector = "li a[title]"
 const ttvContentSelector = "p.content-block"
 
 type ttv struct {
+	errorLog *log.Logger
 	client   *http.Client
 	chapters []*chapter
 	bar      *progressbar.ProgressBar
-	wg       sync.WaitGroup
-	l        sync.Mutex
 }
 
 func (t *ttv) getChapters(cfg *config) ([]*chapter, error) {
@@ -30,9 +28,9 @@ func (t *ttv) getChapters(cfg *config) ([]*chapter, error) {
 		return nil, err
 	}
 
+	length := len(chapters)
 	t.chapters = chapters
-	t.bar = newBar(cfg.length, "  Get chapter...")
-	t.wg.Add(cfg.length)
+	t.bar = newBar(length, "  Get chapter...")
 
 	for i := range t.chapters {
 		req, err := t.newRequest(chapters[i].url)
@@ -40,42 +38,38 @@ func (t *ttv) getChapters(cfg *config) ([]*chapter, error) {
 			return nil, err
 		}
 
-		go t.getChapter(req, i)
+		t.getChapter(req, i)
 	}
 
-	t.wg.Wait()
 	return chapters, nil
 }
 
 func (t *ttv) getChapter(req *http.Request, i int) {
 	res, err := t.client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		t.errorLog.Fatal(err)
 	}
 
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
 		res.Body.Close()
-		go t.getChapter(req, i)
+		t.getChapter(req, i)
 		return
 	}
 
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
-		log.Fatal(err)
+		t.errorLog.Fatal(err)
 	}
 
-	t.l.Lock()
 	t.chapters[i].content = fmt.Sprintf("<h1>%s</h1>", t.chapters[i].title)
 
 	doc.Find(ttvContentSelector).Each(func(j int, s *goquery.Selection) {
 		t.chapters[i].content += fmt.Sprintf("<p>%s</p>", s.Text())
 	})
-	t.l.Unlock()
 
 	t.bar.Add(1)
-	t.wg.Done()
 }
 
 func (t *ttv) getChapterList(cfg *config) ([]*chapter, error) {
@@ -105,22 +99,25 @@ func (t *ttv) getChapterList(cfg *config) ([]*chapter, error) {
 
 	list := doc.Find(ttvListSelector)
 	listLength := list.Size()
+	chapters := make([]*chapter, 0, listLength)
+	isStarted := cfg.startURL == ""
 
-	if cfg.length == 0 {
-		cfg.length = listLength
-	}
+	list.EachWithBreak(func(i int, s *goquery.Selection) bool {
+		url := s.AttrOr("href", "")
 
-	chapters := make([]*chapter, 0, cfg.length)
-
-	list.Each(func(i int, s *goquery.Selection) {
-		if i < listLength-cfg.length {
-			return
+		if !isStarted && strings.Contains(url, cfg.startURL) {
+			isStarted = true
 		}
 
-		title := s.AttrOr("title", "")
-		url := s.AttrOr("href", "")
+		if !isStarted {
+			return true
+		}
+
 		url = strings.Replace(url, "https://truyen.tangthuvien.vn/", "https://m.truyen.tangthuvien.vn/", 1)
+		title := s.AttrOr("title", "")
 		chapters = append(chapters, &chapter{title: title, url: url})
+
+		return cfg.endURL == "" || !strings.Contains(url, cfg.endURL)
 	})
 
 	return chapters, nil
