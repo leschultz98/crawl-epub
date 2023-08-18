@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -16,6 +17,8 @@ const (
 	metruyencvUrlFormat       = "https://metruyencv.com/truyen/%s/chuong-%d"
 )
 
+var ErrInvalidChapter = errors.New("invalid chapter")
+
 type metruyencv struct {
 	wg sync.WaitGroup
 }
@@ -23,26 +26,36 @@ type metruyencv struct {
 func (t *metruyencv) getChapters(cfg *config) ([]*chapter, error) {
 	bar := newBar(cfg.length, "  Get chapter...")
 
-	t.wg.Add(cfg.length)
-
+	end := cfg.length
 	chapters := make([]*chapter, cfg.length)
 
+	t.wg.Add(cfg.length)
 	for i := 0; i < cfg.length; i++ {
 		go func(i int) {
+			defer func() {
+				bar.Add(1)
+				t.wg.Done()
+			}()
+
 			chapter, err := t.getChapter(fmt.Sprintf(metruyencvUrlFormat, cfg.title, i+1))
 			if err != nil {
+				if errors.Is(err, ErrInvalidChapter) {
+					if end > i {
+						end = i
+					}
+					return
+				}
+
 				log.Fatal(err)
 			}
 
 			chapters[i] = chapter
 
-			bar.Add(1)
-			t.wg.Done()
 		}(i)
 	}
-
 	t.wg.Wait()
-	return chapters, nil
+
+	return chapters[:end], nil
 }
 
 func (t *metruyencv) getChapter(url string) (*chapter, error) {
@@ -75,10 +88,17 @@ func (t *metruyencv) getChapter(url string) (*chapter, error) {
 		content = fmt.Sprintf("<h1>%s</h1>", title)
 	})
 
-	doc.Find(metruyencvContentSelector).Contents().Each(func(_ int, s *goquery.Selection) {
+	doc.Find(metruyencvContentSelector).Contents().EachWithBreak(func(_ int, s *goquery.Selection) bool {
+		if goquery.NodeName(s) == "div" && s.Text() == "Vui lòng đăng nhập để đọc tiếp nội dung" {
+			err = ErrInvalidChapter
+			return false
+		}
+
 		if goquery.NodeName(s) == "#text" {
 			content += fmt.Sprintf("<p>%s</p>", strings.TrimSpace(s.Text()))
 		}
+
+		return true
 	})
 	if err != nil {
 		return nil, err
