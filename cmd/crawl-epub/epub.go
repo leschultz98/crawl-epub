@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 
 	"github.com/bmaupin/go-epub"
@@ -11,11 +12,36 @@ const (
 	fontPath  = "assets/fonts/OpenSans-Regular.ttf"
 	cssPath   = "assets/styles/styles.css"
 	outputDir = "ebooks"
+	maxS      = 300
 )
 
-func writeEpub(title string, chapters []*chapter) error {
-	newSpinner("Write epub...")
+func writeEpubs(title string, chapters []*chapter) error {
+	newSpinner("Write epubs...")
 
+	length := len(chapters)
+	count := int(math.Ceil(float64(length) / float64(maxS)))
+
+	for i := 0; i < count; i++ {
+		suffix := fmt.Sprintf("-%d", i+1)
+		if count == 1 {
+			suffix = ""
+		}
+
+		end := maxS * (i + 1)
+		if end > length {
+			end = length
+		}
+
+		err := writeEpub(title+suffix, chapters[i*(maxS):end])
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func writeEpub(title string, chapters []*chapter) error {
 	e := epub.NewEpub(title)
 
 	_, err := e.AddFont(fontPath, "")

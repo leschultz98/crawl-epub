@@ -62,7 +62,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = writeEpub(cfg.title, chapters)
+	err = writeEpubs(cfg.title, chapters)
 	if err != nil {
 		log.Fatal(err)
 	}
