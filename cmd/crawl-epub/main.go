@@ -7,8 +7,9 @@ import (
 )
 
 const (
-	truyenyySource = "truyenyy"
-	ttvSource      = "ttv"
+	truyenyySource   = "truyenyy"
+	metruyencvSource = "metruyencv"
+	ttvSource        = "ttv"
 )
 
 type config struct {
@@ -33,12 +34,12 @@ type crawler interface {
 func main() {
 	var cfg config
 
-	flag.StringVar(&cfg.source, "source", ttvSource, "ebook sources: truyenyy, ttv")
-	flag.StringVar(&cfg.title, "title", "trafford-nguoi-mua-cau-lac-bo", "ebook title")
-	flag.IntVar(&cfg.length, "length", 0, "number of chapter (truyenyy: from start, ttv: to end)")
+	flag.StringVar(&cfg.source, "source", "", "ebook sources: truyenyy, metruyencv, ttv")
+	flag.StringVar(&cfg.title, "title", "", "ebook title")
+	flag.IntVar(&cfg.length, "length", 0, "number of chapter")
 	flag.StringVar(&cfg.startURL, "startURL", "", "start chapter url")
 	flag.StringVar(&cfg.endURL, "endURL", "", "end chapter url")
-	flag.StringVar(&cfg.bookID, "bookID", "13450", "ttv book id")
+	flag.StringVar(&cfg.bookID, "bookID", "", "ttv book id")
 	flag.Parse()
 
 	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
@@ -48,6 +49,8 @@ func main() {
 	switch cfg.source {
 	case truyenyySource:
 		c = &truyenyy{}
+	case metruyencvSource:
+		c = &metruyencv{}
 	case ttvSource:
 		c = &ttv{errorLog: errorLog}
 	default:

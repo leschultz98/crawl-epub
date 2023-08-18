@@ -20,7 +20,6 @@ const (
 type truyenyy struct {
 	client *http.Client
 	wg     sync.WaitGroup
-	l      sync.Mutex
 }
 
 func (t *truyenyy) getChapters(cfg *config) ([]*chapter, error) {
@@ -48,9 +47,7 @@ func (t *truyenyy) getChapters(cfg *config) ([]*chapter, error) {
 				log.Fatal(err)
 			}
 
-			t.l.Lock()
 			chapters[i] = chapter
-			t.l.Unlock()
 
 			bar.Add(1)
 			t.wg.Done()
