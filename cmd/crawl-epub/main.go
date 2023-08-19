@@ -14,10 +14,12 @@ const (
 
 type config struct {
 	source   string
-	length   int
+	title    string
+	suffix   string
+	start    int
+	end      int
 	startURL string
 	endURL   string
-	title    string
 	bookID   string
 }
 
@@ -34,9 +36,11 @@ type crawler interface {
 func main() {
 	var cfg config
 
-	flag.StringVar(&cfg.source, "source", "", "ebook sources: truyenyy, metruyencv, ttv")
+	flag.StringVar(&cfg.source, "source", "", "ebook sources")
 	flag.StringVar(&cfg.title, "title", "", "ebook title")
-	flag.IntVar(&cfg.length, "length", 0, "number of chapter")
+	flag.StringVar(&cfg.suffix, "suffix", "", "ebook title suffix")
+	flag.IntVar(&cfg.start, "start", 1, "start chapter")
+	flag.IntVar(&cfg.end, "end", 1, "end chapter")
 	flag.StringVar(&cfg.startURL, "startURL", "", "start chapter url")
 	flag.StringVar(&cfg.endURL, "endURL", "", "end chapter url")
 	flag.StringVar(&cfg.bookID, "bookID", "", "ttv book id")
@@ -62,7 +66,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = writeEpubs(cfg.title, chapters)
+	err = writeEpubs(cfg.title+cfg.suffix, chapters)
 	if err != nil {
 		log.Fatal(err)
 	}

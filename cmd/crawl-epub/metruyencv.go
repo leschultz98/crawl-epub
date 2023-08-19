@@ -24,20 +24,20 @@ type metruyencv struct {
 }
 
 func (t *metruyencv) getChapters(cfg *config) ([]*chapter, error) {
-	bar := newBar(cfg.length, "  Get chapter...")
+	length := cfg.end - cfg.start + 1
+	bar := newBar(length, "  Get chapter...")
+	end := length
+	chapters := make([]*chapter, length)
 
-	end := cfg.length
-	chapters := make([]*chapter, cfg.length)
-
-	t.wg.Add(cfg.length)
-	for i := 0; i < cfg.length; i++ {
+	t.wg.Add(length)
+	for i := 0; i < length; i++ {
 		go func(i int) {
 			defer func() {
 				bar.Add(1)
 				t.wg.Done()
 			}()
 
-			chapter, err := t.getChapter(fmt.Sprintf(metruyencvUrlFormat, cfg.title, i+1))
+			chapter, err := t.getChapter(fmt.Sprintf(metruyencvUrlFormat, cfg.title, cfg.start+i))
 			if err != nil {
 				if errors.Is(err, ErrInvalidChapter) {
 					if end > i {

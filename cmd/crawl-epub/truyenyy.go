@@ -23,12 +23,6 @@ type truyenyy struct {
 }
 
 func (t *truyenyy) getChapters(cfg *config) ([]*chapter, error) {
-	if cfg.length < 1 {
-		log.Fatal("must set appropriate end")
-	}
-
-	bar := newBar(cfg.length, "  Get chapter...")
-
 	t.client = &http.Client{
 		// disable HTTP/2
 		Transport: &http.Transport{
@@ -36,13 +30,15 @@ func (t *truyenyy) getChapters(cfg *config) ([]*chapter, error) {
 		},
 	}
 
-	t.wg.Add(cfg.length)
+	length := cfg.end - cfg.start + 1
+	bar := newBar(length, "  Get chapter...")
+	chapters := make([]*chapter, length)
 
-	chapters := make([]*chapter, cfg.length)
-
-	for i := 0; i < cfg.length; i++ {
+	t.wg.Add(length)
+	for i := 0; i < length; i++ {
 		go func(i int) {
-			chapter, err := t.getChapter(fmt.Sprintf(truyenyyUrlFormat, cfg.title, i+1), i+1)
+			num := cfg.start + i
+			chapter, err := t.getChapter(fmt.Sprintf(truyenyyUrlFormat, cfg.title, num), num)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -53,8 +49,8 @@ func (t *truyenyy) getChapters(cfg *config) ([]*chapter, error) {
 			t.wg.Done()
 		}(i)
 	}
-
 	t.wg.Wait()
+
 	return chapters, nil
 }
 
