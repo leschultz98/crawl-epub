@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -31,6 +32,9 @@ func (t *metruyencv) getChapters(cfg *config) ([]*chapter, error) {
 
 	t.wg.Add(length)
 	for i := 0; i < length; i++ {
+		if i%70 == 0 {
+			time.Sleep(200 * time.Millisecond)
+		}
 		go func(i int) {
 			defer func() {
 				bar.Add(1)
