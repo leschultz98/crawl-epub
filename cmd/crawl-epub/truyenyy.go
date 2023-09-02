@@ -14,7 +14,7 @@ import (
 const (
 	truyenyyTitleSelector   = "h2.heading-font"
 	truyenyyContentSelector = "#inner_chap_content_1"
-	truyenyyUrlFormat       = "https://truyenyy.vip/truyen/%s/chuong-%d.html"
+	truyenyyURLFormat       = "https://truyenyy.vip/truyen/%s/chuong-%d.html"
 )
 
 type truyenyy struct {
@@ -38,7 +38,7 @@ func (t *truyenyy) getChapters(cfg *config) ([]*chapter, error) {
 	for i := 0; i < length; i++ {
 		go func(i int) {
 			num := cfg.start + i
-			chapter, err := t.getChapter(fmt.Sprintf(truyenyyUrlFormat, cfg.title, num), num)
+			chapter, err := t.getChapter(fmt.Sprintf(truyenyyURLFormat, cfg.title, num), num)
 			if err != nil {
 				log.Fatal(err)
 			}

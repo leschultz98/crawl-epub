@@ -15,7 +15,7 @@ import (
 const (
 	metruyencvTitleSelector   = ".nh-read__title"
 	metruyencvContentSelector = "#article"
-	metruyencvUrlFormat       = "https://metruyencv.com/truyen/%s/chuong-%d"
+	metruyencvURLFormat       = "https://metruyencv.com/truyen/%s/chuong-%d"
 )
 
 var ErrInvalidChapter = errors.New("invalid chapter")
@@ -41,7 +41,7 @@ func (t *metruyencv) getChapters(cfg *config) ([]*chapter, error) {
 				t.wg.Done()
 			}()
 
-			chapter, err := t.getChapter(fmt.Sprintf(metruyencvUrlFormat, cfg.title, cfg.start+i))
+			chapter, err := t.getChapter(fmt.Sprintf(metruyencvURLFormat, cfg.title, cfg.start+i))
 			if err != nil {
 				if errors.Is(err, ErrInvalidChapter) {
 					if end > i {

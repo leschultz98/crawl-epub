@@ -9,6 +9,7 @@ import (
 const (
 	truyenyySource   = "truyenyy"
 	metruyencvSource = "metruyencv"
+	truyenchuSource  = "truyenchu"
 	ttvSource        = "ttv"
 )
 
@@ -55,6 +56,8 @@ func main() {
 		c = &truyenyy{}
 	case metruyencvSource:
 		c = &metruyencv{}
+	case truyenchuSource:
+		c = &truyenchu{}
 	case ttvSource:
 		c = &ttv{errorLog: errorLog}
 	default:
