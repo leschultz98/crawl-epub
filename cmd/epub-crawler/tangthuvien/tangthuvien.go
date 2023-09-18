@@ -2,7 +2,6 @@ package tangthuvien
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
@@ -15,12 +14,8 @@ import (
 
 const idSelector = "a.back"
 const listSelector = "li a[title]"
+const titleSelector = "h4.page-title"
 const contentSelector = "p.content-block"
-
-type chapter struct {
-	epub.Chapter
-	url string
-}
 
 type Crawler struct {
 	title     string
@@ -47,37 +42,48 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 	chapters := make([]*epub.Chapter, 0, length)
 
 	for i := range list {
-		writeChapter(list[i])
-		chapters = append(chapters, &list[i].Chapter)
+		chapter, err := getChapter(list[i])
+		if err != nil {
+			return "", nil, err
+		}
+
+		chapters = append(chapters, chapter)
 		c.bar.Add(1)
 	}
 
 	return c.title, chapters, nil
 }
 
-func writeChapter(chapter *chapter) {
-	res, err := makeRequest(chapter.url)
+func getChapter(url string) (*epub.Chapter, error) {
+	res, err := makeRequest(url)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
 		res.Body.Close()
-		writeChapter(chapter)
-		return
+		return getChapter(url)
 	}
 
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
+
+	chapter := &epub.Chapter{}
+
+	doc.Find(titleSelector).Each(func(j int, s *goquery.Selection) {
+		chapter.Title = s.Text()
+	})
 
 	chapter.Content = fmt.Sprintf("<h1>%s</h1>", chapter.Title)
 
 	doc.Find(contentSelector).Each(func(j int, s *goquery.Selection) {
 		chapter.Content += fmt.Sprintf("<p>%s</p>", s.Text())
 	})
+
+	return chapter, nil
 }
 
 func getID(title, startPath string) (string, error) {
@@ -102,7 +108,7 @@ func getID(title, startPath string) (string, error) {
 	return id, nil
 }
 
-func getList(id string, startPath string) ([]*chapter, error) {
+func getList(id string, startPath string) ([]string, error) {
 	res, err := makeRequest(fmt.Sprintf("https://truyen.tangthuvien.vn/doc-truyen/page/%s?limit=9999", id))
 	if err != nil {
 		return nil, err
@@ -114,7 +120,7 @@ func getList(id string, startPath string) ([]*chapter, error) {
 		return nil, err
 	}
 
-	chapters := make([]*chapter, 0)
+	list := make([]string, 0)
 	isStarted := startPath == ""
 
 	doc.Find(listSelector).Each(func(i int, s *goquery.Selection) {
@@ -128,14 +134,10 @@ func getList(id string, startPath string) ([]*chapter, error) {
 			return
 		}
 
-		title := s.AttrOr("title", "")
-		chapters = append(chapters, &chapter{
-			Chapter: epub.Chapter{Title: title},
-			url:     url,
-		})
+		list = append(list, url)
 	})
 
-	return chapters, nil
+	return list, nil
 }
 
 func makeRequest(url string) (*http.Response, error) {
