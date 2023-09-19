@@ -57,10 +57,12 @@ func write(title string, chapters []*Chapter) error {
 		return err
 	}
 
-	for i := range chapters {
-		_, err := e.AddSection(chapters[i].Content, chapters[i].Title, "", css)
-		if err != nil {
-			return err
+	for _, chapter := range chapters {
+		if chapter.Title != "" && chapter.Content != "" {
+			_, err := e.AddSection(chapter.Content, chapter.Title, "", css)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
