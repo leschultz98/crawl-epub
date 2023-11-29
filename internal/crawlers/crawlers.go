@@ -16,7 +16,7 @@ const (
 )
 
 type Crawler interface {
-	GetEbook() (string, []*epub.Chapter, error)
+	GetEbook(maxLength int) (string, []*epub.Chapter, error)
 }
 
 func GetCrawler(host string, paths []string) Crawler {

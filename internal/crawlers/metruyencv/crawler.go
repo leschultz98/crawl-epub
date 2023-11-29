@@ -1,8 +1,6 @@
 package metruyencv
 
 import (
-	"crawl-epub/internal/epub"
-	"crawl-epub/internal/progress"
 	"errors"
 	"fmt"
 	"net/http"
@@ -10,6 +8,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"crawl-epub/internal/epub"
+	"crawl-epub/internal/progress"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -35,7 +36,7 @@ func New(paths []string) *Crawler {
 	}
 }
 
-func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
+func (c *Crawler) GetEbook(maxLength int) (string, []*epub.Chapter, error) {
 	max, err := getMax(c.title)
 	if err != nil {
 		return "", nil, err
@@ -43,6 +44,11 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 
 	var wg sync.WaitGroup
 	length := max - c.start + 1
+
+	if maxLength > 0 && length > maxLength {
+		length = maxLength
+	}
+
 	chapters := make([]*epub.Chapter, length)
 	end := length
 	bar := progress.NewBar(length, "Get chapters...")

@@ -22,7 +22,7 @@ func main() {
 
 	c := crawlers.GetCrawler(host, paths)
 
-	title, chapters, err := c.GetEbook()
+	title, chapters, err := c.GetEbook(0)
 	if err != nil {
 		log.Fatal(err)
 	}
