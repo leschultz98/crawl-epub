@@ -20,7 +20,10 @@ func main() {
 	host := urlParts[0]
 	paths := urlParts[1:]
 
-	c := crawlers.GetCrawler(host, paths)
+	c, err := crawlers.GetCrawler(host, paths)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	title, chapters, err := c.GetEbook(0)
 	if err != nil {

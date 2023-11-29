@@ -1,6 +1,7 @@
 package crawlers
 
 import (
+	"errors"
 	"strings"
 
 	"crawl-epub/internal/crawlers/metruyencv"
@@ -19,7 +20,7 @@ type Crawler interface {
 	GetEbook(maxLength int) (string, []*epub.Chapter, error)
 }
 
-func GetCrawler(host string, paths []string) Crawler {
+func GetCrawler(host string, paths []string) (Crawler, error) {
 	var c Crawler
 
 	switch {
@@ -29,7 +30,9 @@ func GetCrawler(host string, paths []string) Crawler {
 		c = tangthuvien.New(paths)
 	case strings.Contains(host, truyenchuHost):
 		c = truyenchu.New(paths)
+	default:
+		return nil, errors.New("")
 	}
 
-	return c
+	return c, nil
 }
