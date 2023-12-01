@@ -138,7 +138,7 @@
       const text = document.querySelector('#text');
 
       let count;
-      const eventSource = new EventSource('http://localhost:8080/messages');
+      const eventSource = new EventSource('/messages');
 
       eventSource.onmessage = (event) => {
         if (svg.style.display !== 'none') {
@@ -154,7 +154,7 @@
         text.innerHTML = `${percent} (${count}/${event.data})`;
       };
 
-      async function crawl(params) {
+      async function crawl() {
         const path = input.value.replace('https://', '');
         if (path) {
           link.style.display = 'none';
@@ -164,7 +164,7 @@
           count = 0;
           text.innerHTML = '';
 
-          const res = await fetch(`http://localhost:8080/api/${path}`);
+          const res = await fetch(`/api/${path}`);
           const blob = await res.blob();
           const url = window.URL.createObjectURL(blob);
 
