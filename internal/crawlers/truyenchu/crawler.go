@@ -22,12 +22,14 @@ const (
 type Crawler struct {
 	title     string
 	startPath string
+	ch        *sync.Map
 }
 
-func New(paths []string) *Crawler {
+func New(paths []string, ch *sync.Map) *Crawler {
 	return &Crawler{
 		title:     paths[0],
 		startPath: paths[1],
+		ch:        ch,
 	}
 }
 
@@ -58,6 +60,12 @@ func (c *Crawler) GetEbook(maxLength int) (string, []*epub.Chapter, error) {
 		go func(i int) {
 			defer func() {
 				bar.Add(1)
+				if c.ch != nil {
+					c.ch.Range(func(key, value any) bool {
+						value.(chan int) <- length
+						return true
+					})
+				}
 				wg.Done()
 			}()
 

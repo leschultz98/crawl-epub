@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 
 	"crawl-epub/internal/epub"
 	"crawl-epub/internal/progress"
@@ -22,12 +23,14 @@ const (
 type Crawler struct {
 	title     string
 	startPath string
+	ch        *sync.Map
 }
 
-func New(paths []string) *Crawler {
+func New(paths []string, ch *sync.Map) *Crawler {
 	return &Crawler{
 		title:     paths[1],
 		startPath: paths[2],
+		ch:        ch,
 	}
 }
 
@@ -60,6 +63,12 @@ func (c *Crawler) GetEbook(maxLength int) (string, []*epub.Chapter, error) {
 
 		chapters = append(chapters, chapter)
 		bar.Add(1)
+		if c.ch != nil {
+			c.ch.Range(func(key, value any) bool {
+				value.(chan int) <- length
+				return true
+			})
+		}
 	}
 
 	return c.title, chapters, nil

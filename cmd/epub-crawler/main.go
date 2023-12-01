@@ -20,7 +20,7 @@ func main() {
 	host := urlParts[0]
 	paths := urlParts[1:]
 
-	c, err := crawlers.GetCrawler(host, paths)
+	c, err := crawlers.GetCrawler(host, paths, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

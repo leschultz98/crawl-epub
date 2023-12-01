@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Crawl Epub</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <style>
+      body {
+        background: #efefef;
+        min-height: 100vh;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-family: sans-serif;
+      }
+      .btn {
+        background-color: DodgerBlue;
+        border: none;
+        color: white;
+        padding: 12px 16px;
+        font-size: 16px;
+        border-radius: 16px;
+        cursor: pointer;
+      }
+      .btn:hover {
+        background-color: RoyalBlue;
+      }
+
+      .progress-wrap {
+        display: flex;
+        background: #274545;
+        justify-content: flex-start;
+        border-radius: 100px;
+        align-items: center;
+        position: relative;
+        padding: 0 5px;
+        height: 40px;
+        width: 80vw;
+        max-width: 500px;
+      }
+
+      .bar {
+        border-radius: 100px;
+        background: #326666;
+        height: 30px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div
+      id="link"
+      style="width: 80vw; max-width: 400px; display: flex; flex-direction: column; align-items: center; gap: 16px"
+    >
+      <input
+        type="text"
+        placeholder="What's URL?"
+        style="background: none; border: none; outline: none; font-size: 1.5em; text-align: center"
+      />
+      <button class="btn" onclick="crawl()">Go</button>
+    </div>
+
+    <svg
+      width="200px"
+      height="200px"
+      preserveAspectRatio="xMidYMid"
+      viewBox="0 0 100 100"
+      xmlns="http://www.w3.org/2000/svg"
+      style="display: none"
+    >
+      <circle cx="50" cy="50" r="0" fill="none" stroke="#e90c59" stroke-width="2">
+        <animate
+          attributeName="r"
+          begin="0s"
+          calcMode="spline"
+          dur="1s"
+          keySplines="0 0.2 0.8 1"
+          keyTimes="0;1"
+          repeatCount="indefinite"
+          values="0;40"
+        />
+        <animate
+          attributeName="opacity"
+          begin="0s"
+          calcMode="spline"
+          dur="1s"
+          keySplines="0.2 0 0.8 1"
+          keyTimes="0;1"
+          repeatCount="indefinite"
+          values="1;0"
+        />
+      </circle>
+      <circle cx="50" cy="50" r="0" fill="none" stroke="#46dff0" stroke-width="2">
+        <animate
+          attributeName="r"
+          begin="-0.5s"
+          calcMode="spline"
+          dur="1s"
+          keySplines="0 0.2 0.8 1"
+          keyTimes="0;1"
+          repeatCount="indefinite"
+          values="0;40"
+        />
+        <animate
+          attributeName="opacity"
+          begin="-0.5s"
+          calcMode="spline"
+          dur="1s"
+          keySplines="0.2 0 0.8 1"
+          keyTimes="0;1"
+          repeatCount="indefinite"
+          values="1;0"
+        />
+      </circle>
+    </svg>
+
+    <div class="progress" style="display: none">
+      <div class="progress-wrap">
+        <div class="bar"></div>
+      </div>
+
+      <div id="text" style="font-size: 24px; text-align: center; margin-top: 16px"></div>
+    </div>
+
+    <script>
+      const input = document.querySelector('input');
+      const link = document.querySelector('#link');
+      const svg = document.querySelector('svg');
+      const progress = document.querySelector('.progress');
+      const bar = document.querySelector('.bar');
+      const text = document.querySelector('#text');
+
+      let count;
+      const eventSource = new EventSource('http://localhost:8080/messages');
+
+      eventSource.onmessage = (event) => {
+        if (svg.style.display !== 'none') {
+          svg.style.display = 'none';
+        }
+
+        if (progress.style.display !== 'block') {
+          progress.style.display = 'block';
+        }
+
+        const percent = Math.round((++count / +event.data) * 100) + '%';
+        bar.style.width = percent;
+        text.innerHTML = `${percent} (${count}/${event.data})`;
+      };
+
+      async function crawl(params) {
+        const path = input.value.replace('https://', '');
+        if (path) {
+          link.style.display = 'none';
+          svg.style.display = 'block';
+
+          input.value = '';
+          count = 0;
+          text.innerHTML = '';
+
+          const res = await fetch(`http://localhost:8080/api/${path}`);
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = res.headers.get('content-disposition').split('filename=')[1];
+          a.click();
+
+          window.URL.revokeObjectURL(url);
+          link.style.display = 'flex';
+          svg.style.display = 'none';
+          progress.style.display = 'none';
+        }
+      }
+    </script>
+  </body>
+</html>
