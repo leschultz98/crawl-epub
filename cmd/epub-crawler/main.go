@@ -22,9 +22,7 @@ func main() {
 	paths := urlParts[1:]
 
 	cfg := &config.Config{
-		Paths:     paths,
-		Ch:        nil,
-		MaxLength: 0,
+		Paths: paths,
 	}
 
 	c, err := crawlers.GetCrawler(host, cfg)

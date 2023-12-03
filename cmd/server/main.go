@@ -15,7 +15,8 @@ import (
 )
 
 type app struct {
-	chMap *sync.Map
+	progressChMap *sync.Map
+	infoChMap     *sync.Map
 }
 
 func main() {
@@ -32,7 +33,8 @@ func main() {
 	}
 
 	a := app{
-		chMap: &sync.Map{},
+		progressChMap: &sync.Map{},
+		infoChMap:     &sync.Map{},
 	}
 
 	mux.Handle("/", http.FileServer(http.FS(public.StaticFiles)))
@@ -52,12 +54,14 @@ func (a *app) crawlHandler(w http.ResponseWriter, r *http.Request) {
 	paths := urlParts[3:]
 
 	id := r.URL.Query().Get("id")
-	ch, _ := a.chMap.Load(id)
+	progressCh, _ := a.progressChMap.Load(id)
+	infoCh, _ := a.infoChMap.Load(id)
 
 	cfg := &config.Config{
-		Paths:     paths,
-		Ch:        ch.(chan int),
-		MaxLength: epub.MaxS,
+		Paths:      paths,
+		ProgressCh: progressCh.(chan int),
+		InfoCh:     infoCh.(chan string),
+		MaxLength:  epub.MaxS,
 	}
 
 	c, err := crawlers.GetCrawler(host, cfg)
@@ -89,16 +93,24 @@ func (a *app) messagesHandler(w http.ResponseWriter, r *http.Request) {
 
 	id := r.URL.Query().Get("id")
 
-	c := make(chan int, epub.MaxS)
-	a.chMap.Store(id, c)
+	progressCh := make(chan int, epub.MaxS)
+	a.progressChMap.Store(id, progressCh)
+
+	infoCh := make(chan string, epub.MaxS+1)
+	a.infoChMap.Store(id, infoCh)
 
 	for {
 		select {
-		case num := <-c:
-			fmt.Fprintf(w, "event: progress\ndata: %d\n\n", num)
+		case progress := <-progressCh:
+			fmt.Fprintf(w, "event: progress\ndata: %d\n\n", progress)
+			w.(http.Flusher).Flush()
+		case info := <-infoCh:
+			fmt.Fprintf(w, "event: info\ndata: %s\n\n", info)
 			w.(http.Flusher).Flush()
 		case <-r.Context().Done():
-			a.chMap.Delete(id)
+			a.progressChMap.Delete(id)
+			a.infoChMap.Delete(id)
+			break
 		}
 	}
 }

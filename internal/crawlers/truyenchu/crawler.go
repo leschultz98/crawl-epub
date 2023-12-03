@@ -41,6 +41,7 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 
 	list, err := getList(id, c.title, c.startPath)
 	if err != nil {
+		c.Config.Info(err.Error())
 		return "", nil, err
 	}
 
@@ -58,12 +59,11 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 	for i := range list {
 		go func(i int) {
 			defer func() {
-				if c.Ch != nil {
-					c.Ch <- length
-				}
+				c.Config.Progress(length)
 				wg.Done()
 			}()
 
+			c.Config.Info(list[i])
 			chapter, err := getChapter(list[i])
 			if err != nil {
 				panic(err)
