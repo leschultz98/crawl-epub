@@ -95,7 +95,7 @@ func (a *app) messagesHandler(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case num := <-c:
-			fmt.Fprintf(w, "data: %d\n\n", num)
+			fmt.Fprintf(w, "event: progress\ndata: %d\n\n", num)
 			w.(http.Flusher).Flush()
 		case <-r.Context().Done():
 			a.chMap.Delete(id)
