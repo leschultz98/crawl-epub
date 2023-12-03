@@ -130,6 +130,8 @@
     </div>
 
     <script>
+      const id = crypto.randomUUID();
+
       const input = document.querySelector('input');
       const link = document.querySelector('#link');
       const svg = document.querySelector('svg');
@@ -138,7 +140,7 @@
       const text = document.querySelector('#text');
 
       let count;
-      const eventSource = new EventSource('/messages');
+      const eventSource = new EventSource(`/messages?id=${id}`);
 
       eventSource.onmessage = (event) => {
         if (svg.style.display !== 'none') {
@@ -164,7 +166,7 @@
           count = 0;
           text.innerHTML = '';
 
-          const res = await fetch(`/api/${path}`);
+          const res = await fetch(`/api/${path}?id=${id}`);
           const blob = await res.blob();
           const url = window.URL.createObjectURL(blob);
 

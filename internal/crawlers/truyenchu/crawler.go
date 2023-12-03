@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"sync"
 
+	"crawl-epub/internal/crawlers/config"
 	"crawl-epub/internal/epub"
-	"crawl-epub/internal/progress"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -22,18 +22,18 @@ const (
 type Crawler struct {
 	title     string
 	startPath string
-	ch        *sync.Map
+	*config.Config
 }
 
-func New(paths []string, ch *sync.Map) *Crawler {
+func New(c *config.Config) *Crawler {
 	return &Crawler{
-		title:     paths[0],
-		startPath: paths[1],
-		ch:        ch,
+		title:     c.Paths[0],
+		startPath: c.Paths[1],
+		Config:    c,
 	}
 }
 
-func (c *Crawler) GetEbook(maxLength int) (string, []*epub.Chapter, error) {
+func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 	id, err := getID(c.title, c.startPath)
 	if err != nil {
 		return "", nil, err
@@ -47,24 +47,19 @@ func (c *Crawler) GetEbook(maxLength int) (string, []*epub.Chapter, error) {
 	var wg sync.WaitGroup
 	length := len(list)
 
-	if maxLength > 0 && length > maxLength {
-		list = list[0:maxLength]
-		length = maxLength
+	if c.MaxLength > 0 && length > c.MaxLength {
+		list = list[0:c.MaxLength]
+		length = c.MaxLength
 	}
 
 	chapters := make([]*epub.Chapter, length)
-	bar := progress.NewBar(length, "Get chapters...")
 	wg.Add(length)
 
 	for i := range list {
 		go func(i int) {
 			defer func() {
-				bar.Add(1)
-				if c.ch != nil {
-					c.ch.Range(func(key, value any) bool {
-						value.(chan int) <- length
-						return true
-					})
+				if c.Ch != nil {
+					c.Ch <- length
 				}
 				wg.Done()
 			}()

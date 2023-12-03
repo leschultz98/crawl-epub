@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"sync"
 
+	"crawl-epub/internal/crawlers/config"
 	"crawl-epub/internal/epub"
-	"crawl-epub/internal/progress"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -23,18 +22,18 @@ const (
 type Crawler struct {
 	title     string
 	startPath string
-	ch        *sync.Map
+	*config.Config
 }
 
-func New(paths []string, ch *sync.Map) *Crawler {
+func New(c *config.Config) *Crawler {
 	return &Crawler{
-		title:     paths[1],
-		startPath: paths[2],
-		ch:        ch,
+		title:     c.Paths[1],
+		startPath: c.Paths[2],
+		Config:    c,
 	}
 }
 
-func (c *Crawler) GetEbook(maxLength int) (string, []*epub.Chapter, error) {
+func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 	id, err := getID(c.title, c.startPath)
 	if err != nil {
 		return "", nil, err
@@ -47,12 +46,11 @@ func (c *Crawler) GetEbook(maxLength int) (string, []*epub.Chapter, error) {
 
 	length := len(list)
 
-	if maxLength > 0 && length > maxLength {
-		list = list[0:maxLength]
-		length = maxLength
+	if c.MaxLength > 0 && length > c.MaxLength {
+		list = list[0:c.MaxLength]
+		length = c.MaxLength
 	}
 
-	bar := progress.NewBar(length, "Get chapters...")
 	chapters := make([]*epub.Chapter, 0, length)
 
 	for i := range list {
@@ -62,12 +60,8 @@ func (c *Crawler) GetEbook(maxLength int) (string, []*epub.Chapter, error) {
 		}
 
 		chapters = append(chapters, chapter)
-		bar.Add(1)
-		if c.ch != nil {
-			c.ch.Range(func(key, value any) bool {
-				value.(chan int) <- length
-				return true
-			})
+		if c.Ch != nil {
+			c.Ch <- length
 		}
 	}
 

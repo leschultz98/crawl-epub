@@ -9,15 +9,15 @@ import (
 	"sync"
 	"time"
 
+	"crawl-epub/internal/crawlers/config"
 	"crawl-epub/internal/epub"
-	"crawl-epub/internal/progress"
 
 	"github.com/PuerkitoBio/goquery"
 )
 
 const (
 	host            = "https://metruyencv.com/truyen"
-	maxSelector     = "td a"
+	latestSelector  = "td a"
 	titleSelector   = ".nh-read__title"
 	contentSelector = "#article"
 )
@@ -27,33 +27,32 @@ var ErrInvalidChapter = errors.New("invalid chapter")
 type Crawler struct {
 	title string
 	start int
-	ch    *sync.Map
+	*config.Config
 }
 
-func New(paths []string, ch *sync.Map) *Crawler {
+func New(c *config.Config) *Crawler {
 	return &Crawler{
-		title: paths[1],
-		start: parseNumber(paths[2]),
-		ch:    ch,
+		title:  c.Paths[1],
+		start:  parseNumber(c.Paths[2]),
+		Config: c,
 	}
 }
 
-func (c *Crawler) GetEbook(maxLength int) (string, []*epub.Chapter, error) {
-	max, err := getMax(c.title)
+func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
+	latest, err := getLatest(c.title)
 	if err != nil {
 		return "", nil, err
 	}
 
 	var wg sync.WaitGroup
-	length := max - c.start + 1
+	length := latest - c.start + 1
 
-	if maxLength > 0 && length > maxLength {
-		length = maxLength
+	if c.MaxLength > 0 && length > c.MaxLength {
+		length = c.MaxLength
 	}
 
 	chapters := make([]*epub.Chapter, length)
 	end := length
-	bar := progress.NewBar(length, "Get chapters...")
 	wg.Add(length)
 
 	for i := 0; i < length; i++ {
@@ -63,12 +62,8 @@ func (c *Crawler) GetEbook(maxLength int) (string, []*epub.Chapter, error) {
 
 		go func(i int) {
 			defer func() {
-				bar.Add(1)
-				if c.ch != nil {
-					c.ch.Range(func(key, value any) bool {
-						value.(chan int) <- length
-						return true
-					})
+				if c.Ch != nil {
+					c.Ch <- length
 				}
 				wg.Done()
 			}()
@@ -133,7 +128,7 @@ func getChapter(url string) (*epub.Chapter, error) {
 	return chapter, nil
 }
 
-func getMax(title string) (int, error) {
+func getLatest(title string) (int, error) {
 	res, err := makeRequest(fmt.Sprintf("%s/%s", host, title))
 	if err != nil {
 		return 0, err
@@ -145,14 +140,14 @@ func getMax(title string) (int, error) {
 		return 0, err
 	}
 
-	var max int
-	doc.Find(maxSelector).Each(func(i int, s *goquery.Selection) {
+	var latest int
+	doc.Find(latestSelector).Each(func(i int, s *goquery.Selection) {
 		url := s.AttrOr("href", "")
 		urlParts := strings.Split(url, "/")
-		max = parseNumber(urlParts[len(urlParts)-1])
+		latest = parseNumber(urlParts[len(urlParts)-1])
 	})
 
-	return max, nil
+	return latest, nil
 }
 
 func makeRequest(url string) (*http.Response, error) {

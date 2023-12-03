@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"crawl-epub/internal/crawlers"
+	"crawl-epub/internal/crawlers/config"
 	"crawl-epub/internal/epub"
 )
 
@@ -20,12 +21,18 @@ func main() {
 	host := urlParts[0]
 	paths := urlParts[1:]
 
-	c, err := crawlers.GetCrawler(host, paths, nil)
+	cfg := &config.Config{
+		Paths:     paths,
+		Ch:        nil,
+		MaxLength: 0,
+	}
+
+	c, err := crawlers.GetCrawler(host, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	title, chapters, err := c.GetEbook(0)
+	title, chapters, err := c.GetEbook()
 	if err != nil {
 		log.Fatal(err)
 	}
