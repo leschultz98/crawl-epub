@@ -7,13 +7,15 @@ import (
 	"os"
 )
 
-const host = "https://truyenchu.vn"
-
 var customTransport = http.DefaultTransport
 
-func handleRequest(w http.ResponseWriter, r *http.Request) {
+type app struct {
+	host string
+}
+
+func (a *app) handleRequest(w http.ResponseWriter, r *http.Request) {
 	// Create a new HTTP request with the same method, URL, and body as the original request
-	proxyReq, err := http.NewRequest(r.Method, host+r.URL.String(), r.Body)
+	proxyReq, err := http.NewRequest(r.Method, a.host+r.URL.String(), r.Body)
 	if err != nil {
 		http.Error(w, "Error creating proxy request", http.StatusInternalServerError)
 		return
@@ -54,10 +56,19 @@ func main() {
 		port = "8000"
 	}
 
+	host := os.Getenv("HOST")
+	if port == "" {
+		port = "https://metruyencv.com"
+	}
+
+	a := app{
+		host: host,
+	}
+
 	// Create a new HTTP server with the handleRequest function as the handler
 	server := http.Server{
 		Addr:    ":" + port,
-		Handler: http.HandlerFunc(handleRequest),
+		Handler: http.HandlerFunc(a.handleRequest),
 	}
 
 	// Start the server and log any errors
