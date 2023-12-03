@@ -7,7 +7,7 @@ import (
 	"crawl-epub/internal/crawlers/config"
 	"crawl-epub/internal/crawlers/metruyencv"
 	"crawl-epub/internal/crawlers/tangthuvien"
-	"crawl-epub/internal/crawlers/truyenchu"
+	"crawl-epub/internal/crawlers/truyencv"
 	"crawl-epub/internal/epub"
 )
 
@@ -30,7 +30,7 @@ func GetCrawler(host string, cfg *config.Config) (Crawler, error) {
 	case strings.Contains(host, tangthuvienHost):
 		c = tangthuvien.New(cfg)
 	case strings.Contains(host, truyenchuHost):
-		c = truyenchu.New(cfg)
+		c = truyencv.New(cfg)
 	default:
 		return nil, errors.New("")
 	}
