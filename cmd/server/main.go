@@ -71,6 +71,7 @@ func (a *app) crawlHandler(w http.ResponseWriter, r *http.Request) {
 
 	title, chapters, err := c.GetEbook()
 	if err != nil {
+		cfg.InfoCh <- err.Error()
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 
