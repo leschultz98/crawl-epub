@@ -16,28 +16,6 @@ import (
 
 const host = "http://103.82.27.230:3001"
 
-type chapterJSON struct {
-	BuildId string `json:"buildId"`
-	Props   struct {
-		PageProps struct {
-			Book struct {
-				ID int `json:"id"`
-			} `json:"book"`
-			Chapter struct {
-				Title       string `json:"title"`
-				Content     string `json:"content"`
-				NextChapter any    `json:"next_chapter"`
-			} `json:"chapter"`
-		} `json:"pageProps"`
-	} `json:"props"`
-}
-
-type dataJSON struct {
-	Data struct {
-		Total int `json:"total"`
-	} `json:"data"`
-}
-
 type Crawler struct {
 	title     string
 	startPath string
@@ -59,13 +37,13 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 	url := fmt.Sprintf("%s/%s/%s", host, c.title, c.startPath)
 
 	for url != "" && count <= c.MaxLength {
-		c.Config.Info(url)
 		chapter, next, err := c.getChapter(url)
 		if err != nil {
 			panic(err)
 		}
 
 		chapters = append(chapters, chapter)
+		c.Config.Info(chapter.Title)
 		c.Config.Progress(c.length)
 
 		if next != "" {
@@ -97,7 +75,21 @@ func (c *Crawler) getChapter(url string) (*epub.Chapter, string, error) {
 	doc.Find("#__NEXT_DATA__").Contents().Each(func(i int, s *goquery.Selection) {
 		j := []byte(s.Text())
 
-		parsedChapter := &chapterJSON{}
+		parsedChapter := &struct {
+			BuildId string `json:"buildId"`
+			Props   struct {
+				PageProps struct {
+					Book struct {
+						ID int `json:"id"`
+					} `json:"book"`
+					Chapter struct {
+						Title       string `json:"title"`
+						Content     string `json:"content"`
+						NextChapter any    `json:"next_chapter"`
+					} `json:"chapter"`
+				} `json:"pageProps"`
+			} `json:"props"`
+		}{}
 		err = json.Unmarshal(j, parsedChapter)
 		if err != nil {
 			return
@@ -124,6 +116,7 @@ func (c *Crawler) getChapter(url string) (*epub.Chapter, string, error) {
 		chapter.Content = strings.ReplaceAll(chapter.Content, "p>", "section>")
 
 		result.Title = chapter.Title
+		chapter.Content += fmt.Sprintf("<h1>%s</h1>", chapter.Title)
 
 		if reflect.TypeOf(chapter.NextChapter).Name() != "bool" {
 			next = chapter.NextChapter.(map[string]any)["slug"].(string)
@@ -156,7 +149,11 @@ func getTotal(id int) (int, error) {
 	}
 	defer res.Body.Close()
 
-	d := &dataJSON{}
+	d := &struct {
+		Data struct {
+			Total int `json:"total"`
+		} `json:"data"`
+	}{}
 	err = json.NewDecoder(res.Body).Decode(d)
 	if err != nil {
 		return 0, err

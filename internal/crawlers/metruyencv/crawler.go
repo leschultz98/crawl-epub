@@ -41,7 +41,6 @@ func New(c *config.Config) *Crawler {
 func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 	latest, err := getLatest(c.title)
 	if err != nil {
-		c.Config.Info(err.Error())
 		return "", nil, err
 	}
 
@@ -62,13 +61,7 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 		}
 
 		go func(i int) {
-			defer func() {
-				c.Config.Progress(length)
-				wg.Done()
-			}()
-
 			url := fmt.Sprintf("%s/%s/chuong-%d", host, c.title, c.start+i)
-			c.Config.Info(url)
 			chapter, err := getChapter(url)
 			if err != nil {
 				if errors.Is(err, ErrInvalidChapter) {
@@ -82,7 +75,9 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 			}
 
 			chapters[i] = chapter
-
+			c.Config.Info(chapter.Title)
+			c.Config.Progress(length)
+			wg.Done()
 		}(i)
 	}
 

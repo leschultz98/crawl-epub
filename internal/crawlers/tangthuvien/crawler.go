@@ -55,13 +55,13 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 	chapters := make([]*epub.Chapter, 0, length)
 
 	for i := range list {
-		c.Config.Info(list[i])
 		chapter, err := getChapter(list[i])
 		if err != nil {
 			return "", nil, err
 		}
 
 		chapters = append(chapters, chapter)
+		c.Config.Info(chapter.Title)
 		c.Config.Progress(length)
 	}
 
