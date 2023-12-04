@@ -176,7 +176,7 @@ func (c *Crawler) parseData(data *ChapterData, page int) error {
 
 		c.chapterSlugs = make([]string, c.length)
 
-		c.endPage = int(math.Ceil(float64(c.length) / 50))
+		c.endPage = int(math.Ceil(float64(c.endChapter) / 50))
 		c.startPage = int(math.Ceil(float64(c.startChapter) / 50))
 
 		if c.startPage > page {
@@ -185,10 +185,15 @@ func (c *Crawler) parseData(data *ChapterData, page int) error {
 	}
 
 	for i, chapter := range data.PageProps.PageData.Chapters {
-		index := (page-c.startPage)*50 + i
+		index := (page-1)*50 + i + 1 - c.startChapter
+		if index < 0 {
+			continue
+		}
+
 		if index == c.length {
 			break
 		}
+
 		c.chapterSlugs[index] = chapter.Slug
 	}
 
