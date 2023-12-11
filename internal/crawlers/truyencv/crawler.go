@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -35,7 +34,6 @@ type Crawler struct {
 	title        string
 	startPath    string
 	prefixURL    string
-	startPage    int
 	endPage      int
 	startChapter int
 	endChapter   int
@@ -89,48 +87,35 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 		return "", nil, err
 	}
 
+	page := 2
+	for c.endPage == 0 || page <= c.endPage {
+		res, err := makeRequest(fmt.Sprintf("%s/%s/%s.json?page=%d&book=%s", host, c.prefixURL, c.title, page, c.title))
+		if err != nil {
+			return "", nil, err
+		}
+
+		d := &ChapterData{}
+		err = json.NewDecoder(res.Body).Decode(d)
+		if err != nil {
+			return "", nil, err
+		}
+
+		res.Body.Close()
+
+		err = c.parseData(d, page)
+		if err != nil {
+			return "", nil, err
+		}
+
+		page++
+	}
+
 	var outErr error
 	var wg sync.WaitGroup
-	wg.Add(c.endPage - c.startPage + 1)
-
-	for i := c.startPage; i <= c.endPage; i++ {
-		go func(i int) {
-			defer func() {
-				wg.Done()
-			}()
-
-			if i != 1 {
-				res, err := makeRequest(fmt.Sprintf("%s/%s/%s.json?page=%d&book=%s", host, c.prefixURL, c.title, i, c.title))
-				if err != nil {
-					outErr = err
-					return
-				}
-				defer res.Body.Close()
-
-				d := &ChapterData{}
-				err = json.NewDecoder(res.Body).Decode(d)
-				if err != nil {
-					outErr = err
-					return
-				}
-
-				err = c.parseData(d, i)
-				if err != nil {
-					outErr = err
-					return
-				}
-			}
-
-		}(i)
-	}
-	wg.Wait()
-
-	if outErr != nil {
-		return "", nil, outErr
-	}
+	wg.Add(c.length)
 
 	chapters := make([]*epub.Chapter, c.length)
-	wg.Add(c.length)
+
 	for i := range c.chapterSlugs {
 		go func(i int) {
 			defer func() {
@@ -159,42 +144,32 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 
 func (c *Crawler) parseData(data *ChapterData, page int) error {
 	c.Config.Info(fmt.Sprintf("%s page %d...", c.title, page))
-	if c.length == 0 {
-		start, err := strconv.Atoi(strings.Split(c.startPath, "-")[1])
-		if err != nil {
-			return err
-		}
-
-		c.startChapter = start
-		c.length = data.PageProps.PageData.Book.TotalChapter - c.startChapter + 1
-
-		if c.length > c.MaxLength {
-			c.length = c.MaxLength
-		}
-
-		c.endChapter = c.startChapter + c.length - 1
-
-		c.chapterSlugs = make([]string, c.length)
-
-		c.endPage = int(math.Ceil(float64(c.endChapter) / 50))
-		c.startPage = int(math.Ceil(float64(c.startChapter) / 50))
-
-		if c.startPage > page {
-			return nil
-		}
-	}
 
 	for i, chapter := range data.PageProps.PageData.Chapters {
-		index := (page-1)*50 + i + 1 - c.startChapter
-		if index < 0 {
+		index := (page-1)*50 + i
+		if chapter.Slug == c.startPath {
+			c.startChapter = index
+			c.length = data.PageProps.PageData.Book.TotalChapter - c.startChapter + 1
+
+			if c.length > c.MaxLength {
+				c.length = c.MaxLength
+			}
+
+			c.endChapter = c.startChapter + c.length - 1
+			c.endPage = int(math.Ceil(float64(c.endChapter) / 50))
+
+			c.chapterSlugs = make([]string, c.length)
+		}
+
+		if c.length == 0 {
 			continue
 		}
 
-		if index == c.length {
+		if index > c.endChapter {
 			break
 		}
 
-		c.chapterSlugs[index] = chapter.Slug
+		c.chapterSlugs[index-c.startChapter] = chapter.Slug
 	}
 
 	return nil
