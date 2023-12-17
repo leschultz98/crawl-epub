@@ -12,11 +12,12 @@ import (
 )
 
 const (
-	host            = "https://truyenchu.vn"
+	host            = "https://truyenchu-vn.translate.goog/"
 	idSelector      = "#truyen-id"
 	listSelector    = "option"
 	titleSelector   = ".chapter-text"
 	contentSelector = "#chapter-c"
+	suffix          = "_x_tr_sl=en&_x_tr_tl=vi&_x_tr_hl=en&_x_tr_pto=wapp"
 )
 
 type Crawler struct {
@@ -112,7 +113,7 @@ func getChapter(url string) (*epub.Chapter, error) {
 }
 
 func getID(title, startPath string) (string, error) {
-	res, err := makeRequest(fmt.Sprintf("%s/%s/%s", host, title, startPath))
+	res, err := makeRequest(fmt.Sprintf("%s/%s/%s?%s", host, title, startPath, suffix))
 	if err != nil {
 		return "", err
 	}
@@ -132,7 +133,7 @@ func getID(title, startPath string) (string, error) {
 }
 
 func getList(id, title, startPath string) ([]string, error) {
-	res, err := makeRequest(fmt.Sprintf("%s/api/services/chapter-option?type=chapter_option&data=%s", host, id))
+	res, err := makeRequest(fmt.Sprintf("%s/api/services/chapter-option?type=chapter_option&data=%s&%s", host, id, suffix))
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +158,7 @@ func getList(id, title, startPath string) ([]string, error) {
 			return
 		}
 
-		list = append(list, fmt.Sprintf("%s/%s/%s", host, title, path))
+		list = append(list, fmt.Sprintf("%s/%s/%s?%s", host, title, path, suffix))
 	})
 
 	return list, nil
