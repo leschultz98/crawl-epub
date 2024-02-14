@@ -14,7 +14,7 @@
   <body>
     <div class="link">
       <input type="text" placeholder="What's URL?" />
-      <button class="button" onclick="crawl()">Go</button>
+      <button onclick="crawl()">Go</button>
     </div>
 
     <svg
@@ -79,6 +79,8 @@
       <div class="text"></div>
     </div>
 
+    <a style="display: none">Download</a>
+
     <div class="info"></div>
 
     <script>
@@ -91,6 +93,7 @@
       const bar = document.querySelector('.bar');
       const text = document.querySelector('.text');
       const info = document.querySelector('.info');
+      const a = document.querySelector('a');
 
       let count;
       const eventSource = new EventSource(`/messages?id=${id}`);
@@ -117,6 +120,13 @@
       });
 
       async function crawl() {
+        if (a.href) {
+          URL.revokeObjectURL(a.href);
+          a.style.display = 'none';
+        }
+
+        info.innerHTML = '';
+
         const path = input.value.replace('https://', '');
         if (path) {
           link.style.display = 'none';
@@ -128,14 +138,13 @@
 
           const res = await fetch(`/api/${path}?id=${id}`);
           const blob = await res.blob();
-          const url = window.URL.createObjectURL(blob);
+          const url = URL.createObjectURL(blob);
 
-          const a = document.createElement('a');
           a.href = url;
           a.download = res.headers.get('content-disposition').split('filename=')[1];
           a.click();
+          a.style.display = 'block';
 
-          window.URL.revokeObjectURL(url);
           link.style.display = 'flex';
           svg.style.display = 'none';
           progress.style.display = 'none';
