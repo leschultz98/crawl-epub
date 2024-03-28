@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	metruyencvHost  = "metruyencv.com"
+	metruyencvHost  = "metruyencv.info"
 	tangthuvienHost = "tangthuvien.vn"
 	truyenchuHost   = "truyenchu.vn"
 )

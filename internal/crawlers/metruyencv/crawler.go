@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	host            = "https://metruyencv.com/truyen"
+	host            = "https://metruyencv.info/truyen"
 	latestSelector  = "td a"
 	titleSelector   = ".nh-read__title"
 	contentSelector = "#article"
@@ -61,6 +61,10 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 		}
 
 		go func(i int) {
+			defer func() {
+				wg.Done()
+			}()
+
 			url := fmt.Sprintf("%s/%s/chuong-%d", host, c.title, c.start+i)
 			chapter, err := getChapter(url)
 			if err != nil {
@@ -77,7 +81,6 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 			chapters[i] = chapter
 			c.Config.Info(chapter.Title)
 			c.Config.Progress(length)
-			wg.Done()
 		}(i)
 	}
 
