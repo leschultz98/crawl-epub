@@ -17,9 +17,9 @@ import (
 
 const (
 	host            = "https://metruyencv.info/truyen"
-	latestSelector  = "td a"
-	titleSelector   = ".nh-read__title"
-	contentSelector = "#article"
+	latestSelector  = "main button.rounded span.bg-primary"
+	titleSelector   = "h2"
+	contentSelector = "#chapter-detail > div"
 )
 
 var ErrInvalidChapter = errors.New("invalid chapter")
@@ -102,7 +102,7 @@ func getChapter(url string) (*epub.Chapter, error) {
 
 	chapter := &epub.Chapter{}
 
-	doc.Find(titleSelector).Each(func(_ int, s *goquery.Selection) {
+	doc.Find(titleSelector).First().Each(func(_ int, s *goquery.Selection) {
 		chapter.Title = strings.TrimSpace(s.Text())
 		chapter.Content = fmt.Sprintf("<h1>%s</h1>", chapter.Title)
 	})
@@ -140,11 +140,12 @@ func getLatest(title string) (int, error) {
 	}
 
 	var latest int
-	doc.Find(latestSelector).Each(func(i int, s *goquery.Selection) {
-		url := s.AttrOr("href", "")
-		urlParts := strings.Split(url, "/")
-		latest = parseNumber(urlParts[len(urlParts)-1])
-	})
+	doc.Find(latestSelector).First().Each(func(i int, s *goquery.Selection) {
+		latest, err = strconv.Atoi(s.Text())
+})
+	if err != nil {
+		return 0, err
+	}
 
 	return latest, nil
 }
