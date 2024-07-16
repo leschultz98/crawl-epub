@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 
 	"crawl-epub/internal/crawlers/config"
 	"crawl-epub/internal/epub"
@@ -12,11 +13,12 @@ import (
 )
 
 const (
-	host            = "https://truyen.tangthuvien.vn/doc-truyen"
+	host            = "https://truyen-tangthuvien-vn.translate.goog/doc-truyen"
 	idSelector      = "a.back"
 	listSelector    = "li a[title]"
 	titleSelector   = "h4.page-title"
 	contentSelector = "p.content-block"
+	suffix          = "_x_tr_sl=auto&_x_tr_tl=en&_x_tr_hl=en&_x_tr_pto=wapp"
 )
 
 type Crawler struct {
@@ -45,6 +47,7 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 		return "", nil, err
 	}
 
+	var wg sync.WaitGroup
 	length := len(list)
 
 	if c.MaxLength > 0 && length > c.MaxLength {
@@ -52,18 +55,25 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 		length = c.MaxLength
 	}
 
-	chapters := make([]*epub.Chapter, 0, length)
+	chapters := make([]*epub.Chapter, length)
+	wg.Add(length)
 
 	for i := range list {
-		chapter, err := getChapter(list[i])
-		if err != nil {
-			return "", nil, err
-		}
+		go func(i int) {
+			defer wg.Done()
 
-		chapters = append(chapters, chapter)
-		c.Config.Info(chapter.Title)
-		c.Config.Progress(length)
+			chapter, err := getChapter(list[i])
+			if err != nil {
+				panic(err)
+			}
+
+			chapters[i] = chapter
+			c.Config.Info(chapter.Title)
+			c.Config.Progress(length)
+		}(i)
 	}
+
+	wg.Wait()
 
 	return c.title, chapters, nil
 }
@@ -101,7 +111,7 @@ func getChapter(url string) (*epub.Chapter, error) {
 }
 
 func getID(title, startPath string) (string, error) {
-	res, err := makeRequest(fmt.Sprintf("%s/%s/%s", host, title, startPath))
+	res, err := makeRequest(fmt.Sprintf("%s/%s/%s?%s", host, title, startPath, suffix))
 	if err != nil {
 		return "", err
 	}
@@ -116,14 +126,15 @@ func getID(title, startPath string) (string, error) {
 	doc.Find(idSelector).Each(func(i int, s *goquery.Selection) {
 		url := s.AttrOr("href", "")
 		urlParts := strings.Split(url, "/")
-		id = urlParts[len(urlParts)-1]
+		lastPart := urlParts[len(urlParts)-1]
+		id = strings.Split(lastPart, "?")[0]
 	})
 
 	return id, nil
 }
 
 func getList(id string, startPath string) ([]string, error) {
-	res, err := makeRequest(fmt.Sprintf("%s/page/%s?limit=9999", host, id))
+	res, err := makeRequest(fmt.Sprintf("%s/page/%s?limit=9999&%s", host, id, suffix))
 	if err != nil {
 		return nil, err
 	}

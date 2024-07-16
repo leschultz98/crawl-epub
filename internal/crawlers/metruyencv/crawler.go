@@ -61,9 +61,7 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 		}
 
 		go func(i int) {
-			defer func() {
-				wg.Done()
-			}()
+			defer wg.Done()
 
 			url := fmt.Sprintf("%s/%s/chuong-%d", host, c.title, c.start+i)
 			chapter, err := getChapter(url)
@@ -142,7 +140,7 @@ func getLatest(title string) (int, error) {
 	var latest int
 	doc.Find(latestSelector).First().Each(func(i int, s *goquery.Selection) {
 		latest, err = strconv.Atoi(s.Text())
-})
+	})
 	if err != nil {
 		return 0, err
 	}
