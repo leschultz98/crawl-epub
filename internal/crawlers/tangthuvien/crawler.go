@@ -2,6 +2,7 @@ package tangthuvien
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -183,7 +184,7 @@ func makeRequest(url string) (*http.Response, error) {
 	req.Header.Set("User-Agent", "Mobile")
 
 	res, err := http.DefaultClient.Do(req)
-	fmt.Printf("%s %s", res.Status, url)
+	log.Printf("%s %s", res.Status, url)
 	if err != nil {
 		return nil, err
 	}

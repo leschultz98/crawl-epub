@@ -3,6 +3,7 @@ package metruyencv
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -165,7 +166,7 @@ func makeRequest(url string) (*http.Response, error) {
 	}
 
 	res, err := http.DefaultClient.Do(req)
-	fmt.Printf("%s %s", res.Status, url)
+	log.Printf("%s %s", res.Status, url)
 	if err != nil {
 		return makeRequest(url)
 	}
