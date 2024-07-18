@@ -183,6 +183,7 @@ func makeRequest(url string) (*http.Response, error) {
 	req.Header.Set("User-Agent", "Mobile")
 
 	res, err := http.DefaultClient.Do(req)
+	fmt.Printf("%s %s", res.Status, url)
 	if err != nil {
 		return nil, err
 	}
