@@ -166,7 +166,7 @@ func makeRequest(url string) (*http.Response, error) {
 	}
 
 	res, err := http.DefaultClient.Do(req)
-	log.Printf("%s %s", res.Status, url)
+	log.Printf("%s %s\n", res.Status, url)
 	if err != nil {
 		return makeRequest(url)
 	}
