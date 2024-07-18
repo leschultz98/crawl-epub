@@ -12,7 +12,6 @@ import (
 )
 
 const (
-	metruyencvHost  = "metruyencv.info"
 	tangthuvienHost = "tangthuvien.vn"
 	truyenchuHost   = "truyenchu.vn"
 )
@@ -25,7 +24,7 @@ func GetCrawler(host string, cfg *config.Config) (Crawler, error) {
 	var c Crawler
 
 	switch {
-	case strings.Contains(host, metruyencvHost):
+	case strings.Contains(host, metruyencv.Host):
 		c = metruyencv.New(cfg)
 	case strings.Contains(host, tangthuvienHost):
 		c = tangthuvien.New(cfg)

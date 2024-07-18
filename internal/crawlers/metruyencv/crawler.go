@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"crawl-epub/internal/crawlers/config"
 	"crawl-epub/internal/epub"
@@ -16,10 +15,12 @@ import (
 )
 
 const (
-	host            = "https://metruyencv.info/truyen"
-	latestSelector  = "main button.rounded span.bg-primary"
-	titleSelector   = "h2"
-	contentSelector = "#chapter-detail > div"
+	Host                   = "metruyencv.com"
+	host                   = "https://metruyencv.com/truyen"
+	latestSelector         = "main button.rounded span.bg-primary"
+	titleSelector          = "h2.text-center"
+	contentSelector        = "#chapter-detail > div"
+	contentLengthThreshold = 3000
 )
 
 var ErrInvalidChapter = errors.New("invalid chapter")
@@ -56,15 +57,11 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 	wg.Add(length)
 
 	for i := 0; i < length; i++ {
-		if i%70 == 0 {
-			time.Sleep(200 * time.Millisecond)
-		}
-
 		go func(i int) {
 			defer wg.Done()
 
 			url := fmt.Sprintf("%s/%s/chuong-%d", host, c.title, c.start+i)
-			chapter, err := getChapter(url)
+			chapter, err := getChapter(url, 0)
 			if err != nil {
 				if errors.Is(err, ErrInvalidChapter) {
 					if end > i {
@@ -86,7 +83,16 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 	return c.title, chapters[:end], nil
 }
 
-func getChapter(url string) (*epub.Chapter, error) {
+func getChapter(origin string, mode int) (*epub.Chapter, error) {
+	url := origin
+
+	switch mode % 3 {
+	case 1:
+		url = strings.Replace(origin, host, "https://metruyencv.info/truyen", 1)
+	case 2:
+		url = strings.Replace(origin, host, "https://metruyencv-info.translate.goog/truyen", 1) + "?_x_tr_sl=auto&_x_tr_tl=en&_x_tr_hl=en&_x_tr_pto=wapp"
+	}
+
 	res, err := makeRequest(url)
 	if err != nil {
 		return nil, err
@@ -120,6 +126,10 @@ func getChapter(url string) (*epub.Chapter, error) {
 
 	if err != nil {
 		return nil, err
+	}
+
+	if (len(chapter.Content) < contentLengthThreshold) && mode < 12 {
+		return getChapter(origin, mode+1)
 	}
 
 	return chapter, nil
@@ -156,7 +166,7 @@ func makeRequest(url string) (*http.Response, error) {
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, err
+		return makeRequest(url)
 	}
 
 	return res, nil
