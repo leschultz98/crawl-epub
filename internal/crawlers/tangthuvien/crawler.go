@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	host            = "https://truyen-tangthuvien-vn.translate.goog/doc-truyen"
+	Host            = "tangthuvien.vn"
+	host            = "https://truyen.tangthuvien.vn/doc-truyen"
 	idSelector      = "a.back"
 	listSelector    = "li a[title]"
 	titleSelector   = "h4.page-title"
@@ -47,7 +48,6 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 		return "", nil, err
 	}
 
-	var wg sync.WaitGroup
 	length := len(list)
 
 	if c.MaxLength > 0 && length > c.MaxLength {
@@ -56,21 +56,31 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 	}
 
 	chapters := make([]*epub.Chapter, length)
-	wg.Add(length)
 
-	for i := range list {
-		go func(i int) {
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	for _, mod := range []int{0, 1} {
+		go func(mod int) {
 			defer wg.Done()
 
-			chapter, err := getChapter(list[i])
-			if err != nil {
-				panic(err)
-			}
+			for i := range list {
+				if i%2 != mod {
+					continue
+				}
 
-			chapters[i] = chapter
-			c.Config.Info(chapter.Title)
-			c.Config.Progress(length)
-		}(i)
+				url := list[i]
+				if mod == 1 {
+					url = strings.Replace(url, host, "https://truyen-tangthuvien-vn.translate.goog/doc-truyen", 1) + "?" + suffix
+				}
+
+				chapter := getChapter(url)
+
+				chapters[i] = chapter
+				c.Config.Info(chapter.Title)
+				c.Config.Progress(length)
+			}
+		}(mod)
 	}
 
 	wg.Wait()
@@ -78,10 +88,10 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 	return c.title, chapters, nil
 }
 
-func getChapter(url string) (*epub.Chapter, error) {
+func getChapter(url string) *epub.Chapter {
 	res, err := makeRequest(url)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	defer res.Body.Close()
 
@@ -92,7 +102,7 @@ func getChapter(url string) (*epub.Chapter, error) {
 
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	chapter := &epub.Chapter{}
@@ -107,11 +117,11 @@ func getChapter(url string) (*epub.Chapter, error) {
 		chapter.Content += fmt.Sprintf("<p>%s</p>", s.Text())
 	})
 
-	return chapter, nil
+	return chapter
 }
 
 func getID(title, startPath string) (string, error) {
-	res, err := makeRequest(fmt.Sprintf("%s/%s/%s?%s", host, title, startPath, suffix))
+	res, err := makeRequest(fmt.Sprintf("%s/%s/%s", host, title, startPath))
 	if err != nil {
 		return "", err
 	}
@@ -126,15 +136,14 @@ func getID(title, startPath string) (string, error) {
 	doc.Find(idSelector).Each(func(i int, s *goquery.Selection) {
 		url := s.AttrOr("href", "")
 		urlParts := strings.Split(url, "/")
-		lastPart := urlParts[len(urlParts)-1]
-		id = strings.Split(lastPart, "?")[0]
+		id = urlParts[len(urlParts)-1]
 	})
 
 	return id, nil
 }
 
 func getList(id string, startPath string) ([]string, error) {
-	res, err := makeRequest(fmt.Sprintf("%s/page/%s?limit=9999&%s", host, id, suffix))
+	res, err := makeRequest(fmt.Sprintf("%s/page/%s?limit=9999", host, id))
 	if err != nil {
 		return nil, err
 	}
