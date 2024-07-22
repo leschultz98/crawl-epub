@@ -3,7 +3,6 @@ package metruyencv
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,8 +15,8 @@ import (
 )
 
 const (
-	Host                   = "metruyencv.com"
-	host                   = "https://proxy-xeb0.onrender.com//truyen"
+	Host                   = "metruyencv.info"
+	host                   = "https://metruyencv.info/truyen"
 	latestSelector         = "main button.rounded span.bg-primary"
 	titleSelector          = "h2.text-center"
 	contentSelector        = "#chapter-detail > div"
@@ -87,12 +86,12 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 func getChapter(origin string, mode int) (*epub.Chapter, error) {
 	url := origin
 
-	switch mode % 3 {
-	case 1:
-		url = strings.Replace(origin, host, "https://metruyencv.info/truyen", 1)
-	case 2:
-		url = strings.Replace(origin, host, "https://metruyencv-info.translate.goog/truyen", 1) + "?_x_tr_sl=auto&_x_tr_tl=en&_x_tr_hl=en&_x_tr_pto=wapp"
-	}
+	// switch mode % 3 {
+	// case 1:
+	// 	url = strings.Replace(origin, host, "https://metruyencv.info/truyen", 1)
+	// case 2:
+	// 	url = strings.Replace(origin, host, "https://metruyencv-info.translate.goog/truyen", 1) + "?_x_tr_sl=auto&_x_tr_tl=en&_x_tr_hl=en&_x_tr_pto=wapp"
+	// }
 
 	res, err := makeRequest(url)
 	if err != nil {
@@ -166,7 +165,7 @@ func makeRequest(url string) (*http.Response, error) {
 	}
 
 	res, err := http.DefaultClient.Do(req)
-	log.Printf("%s %s\n", res.Status, url)
+	fmt.Printf("%s %s\n", res.Status, url)
 	if err != nil {
 		return makeRequest(url)
 	}
