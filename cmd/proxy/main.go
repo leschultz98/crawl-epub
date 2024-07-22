@@ -57,8 +57,8 @@ func main() {
 	}
 
 	host := os.Getenv("HOST")
-	if port == "" {
-		port = "https://metruyencv.com"
+	if host == "" {
+		host = "https://metruyencv.com"
 	}
 
 	a := app{
@@ -72,7 +72,7 @@ func main() {
 	}
 
 	// Start the server and log any errors
-	log.Printf("Started at: http://localhost:%s\n", port)
+	log.Printf("Started at: http://localhost:%s\nHost: %s\n", port, host)
 	err := server.ListenAndServe()
 	if err != nil {
 		log.Fatal("Error starting proxy server: ", err)
