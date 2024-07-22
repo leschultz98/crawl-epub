@@ -17,7 +17,7 @@ import (
 
 const (
 	Host                   = "metruyencv.com"
-	host                   = "https://metruyencv.com/truyen"
+	host                   = "https://proxy-xeb0.onrender.com//truyen"
 	latestSelector         = "main button.rounded span.bg-primary"
 	titleSelector          = "h2.text-center"
 	contentSelector        = "#chapter-detail > div"
