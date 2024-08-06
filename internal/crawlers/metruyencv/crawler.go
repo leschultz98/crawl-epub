@@ -15,7 +15,6 @@ import (
 )
 
 const (
-	Host                   = "metruyencv.info"
 	host                   = "https://metruyencv.info/truyen"
 	latestSelector         = "main button.rounded span.bg-primary"
 	titleSelector          = "h2.text-center"
@@ -31,12 +30,16 @@ type Crawler struct {
 	*config.Config
 }
 
-func New(c *config.Config) *Crawler {
-	return &Crawler{
-		title:  c.Paths[1],
-		start:  parseNumber(c.Paths[2]),
-		Config: c,
+func New(h string, c *config.Config) (*Crawler, error) {
+	if strings.Contains(h, "metruyencv.info") {
+		return &Crawler{
+			title:  c.Paths[1],
+			start:  parseNumber(c.Paths[2]),
+			Config: c,
+		}, nil
 	}
+
+	return nil, errors.New("")
 }
 
 func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {

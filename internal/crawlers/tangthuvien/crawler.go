@@ -1,6 +1,7 @@
 package tangthuvien
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -14,7 +15,6 @@ import (
 )
 
 const (
-	Host            = "tangthuvien.vn"
 	host            = "https://truyen.tangthuvien.vn/doc-truyen"
 	idSelector      = "a.back"
 	listSelector    = "li a[title]"
@@ -29,12 +29,16 @@ type Crawler struct {
 	*config.Config
 }
 
-func New(c *config.Config) *Crawler {
-	return &Crawler{
-		title:     c.Paths[1],
-		startPath: c.Paths[2],
-		Config:    c,
+func New(h string, c *config.Config) (*Crawler, error) {
+	if strings.Contains(h, "tangthuvien.vn") {
+		return &Crawler{
+			title:     c.Paths[1],
+			startPath: c.Paths[2],
+			Config:    c,
+		}, nil
 	}
+
+	return nil, errors.New("")
 }
 
 func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {

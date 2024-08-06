@@ -1,8 +1,10 @@
 package truyenchu
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 
 	"crawl-epub/internal/crawlers/config"
@@ -12,12 +14,11 @@ import (
 )
 
 const (
-	host            = "https://truyenchu-vn.translate.goog/"
+	host            = "https://truyenchu.vn/"
 	idSelector      = "#truyen-id"
 	listSelector    = "option"
 	titleSelector   = ".chapter-text"
 	contentSelector = "#chapter-c"
-	suffix          = "_x_tr_sl=en&_x_tr_tl=vi&_x_tr_hl=en&_x_tr_pto=wapp"
 )
 
 type Crawler struct {
@@ -26,12 +27,24 @@ type Crawler struct {
 	*config.Config
 }
 
-func New(c *config.Config) *Crawler {
-	return &Crawler{
-		title:     c.Paths[0],
-		startPath: c.Paths[1],
-		Config:    c,
+func New(h string, c *config.Config) (*Crawler, error) {
+	if strings.Contains(h, "truyenchu.vn") {
+		return &Crawler{
+			title:     c.Paths[0],
+			startPath: c.Paths[1],
+			Config:    c,
+		}, nil
 	}
+
+	if strings.Contains(h, "lightnovel.vn") {
+		return &Crawler{
+			title:     c.Paths[1],
+			startPath: c.Paths[2],
+			Config:    c,
+		}, nil
+	}
+
+	return nil, errors.New("")
 }
 
 func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
@@ -99,13 +112,19 @@ func getChapter(url string) (*epub.Chapter, error) {
 
 	contentDoc.Find("p").First().Contents().Each(func(i int, s *goquery.Selection) {
 		if goquery.NodeName(s) == "#text" {
-			chapter.Content += fmt.Sprintf("<p>%s</p>", s.Text())
+			text := strings.TrimSpace(s.Text())
+			if text != "" {
+				chapter.Content += fmt.Sprintf("<p>%s</p>", text)
+			}
 		}
 	})
 
 	contentDoc.Contents().Each(func(i int, s *goquery.Selection) {
 		if goquery.NodeName(s) == "#text" {
-			chapter.Content += fmt.Sprintf("<p>%s</p>", s.Text())
+			text := strings.TrimSpace(s.Text())
+			if text != "" {
+				chapter.Content += fmt.Sprintf("<p>%s</p>", text)
+			}
 		}
 	})
 
@@ -113,7 +132,7 @@ func getChapter(url string) (*epub.Chapter, error) {
 }
 
 func getID(title, startPath string) (string, error) {
-	res, err := makeRequest(fmt.Sprintf("%s/%s/%s?%s", host, title, startPath, suffix))
+	res, err := makeRequest(fmt.Sprintf("%s/%s/%s", host, title, startPath))
 	if err != nil {
 		return "", err
 	}
@@ -133,7 +152,7 @@ func getID(title, startPath string) (string, error) {
 }
 
 func getList(id, title, startPath string) ([]string, error) {
-	res, err := makeRequest(fmt.Sprintf("%s/api/services/chapter-option?type=chapter_option&data=%s&%s", host, id, suffix))
+	res, err := makeRequest(fmt.Sprintf("%s/api/services/chapter-option?type=chapter_option&data=%s", host, id))
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +177,7 @@ func getList(id, title, startPath string) ([]string, error) {
 			return
 		}
 
-		list = append(list, fmt.Sprintf("%s/%s/%s?%s", host, title, path, suffix))
+		list = append(list, fmt.Sprintf("%s/%s/%s", host, title, path))
 	})
 
 	return list, nil
