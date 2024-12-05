@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	host            = "https://truyen.tangthuvien.vn/doc-truyen"
+	host            = "https://truyen.tangthuvien.net/doc-truyen"
 	idSelector      = "a.back"
 	listSelector    = "li a[title]"
 	titleSelector   = "h4.page-title"
@@ -76,7 +76,7 @@ func (c *Crawler) GetEbook() (string, []*epub.Chapter, error) {
 
 				url := list[i]
 				if mod == 1 {
-					url = strings.Replace(url, host, "https://truyen-tangthuvien-vn.translate.goog/doc-truyen", 1) + "?" + suffix
+					url = strings.Replace(url, host, "https://truyen-tangthuvien-net.translate.goog/doc-truyen", 1) + "?" + suffix
 				}
 
 				chapter := getChapter(url)
